@@ -1,54 +1,68 @@
-"use client"
 import type {Schema} from '@/amplify/data/resource'
 import {generateClient} from 'aws-amplify/api'
-// import { client } from '@/utils/data' // Uncomment this if you want to use the imported client instead
-import {Amplify} from 'aws-amplify';
-import config from '@/amplifyconfiguration.json';
-import {useEffect, useState} from "react";
+import Button from "@/app/ui/CreateButton";
+import {updateTodo} from "@/app/lib/actions";
+import Todo from "@/app/ui/Todo";
+// import {useEffect, useState} from "react";
 
-Amplify.configure(config);
 const client = generateClient<Schema>()
 
-export default function TodoList() {
-  const [todos, setTodos] = useState<Schema["Todo"][]>([])
+export default async function TodoList() {
+  //const [data, setTodos] = useState<Schema["Todo"][]>([])
 
-  const fetchTodos = async () => {
-    const {data: items, errors} = await client.models.Todo.list()
-    setTodos(items)
-    console.log(items)
-  }
+  // const fetchTodos = async () => {
+  const {data, errors} = await client.models.Todo.list({
+    selectionSet: ["id", "content", "done", "priority", "details", "createdAt", "updatedAt"],
+  })
+  //   setTodos(items)
+  if (errors) console.error(errors);
+  console.log(data)
+  // }
 
-  useEffect(() => {
-    const sub = client.models.Todo
-      .observeQuery()
-      .subscribe({
-        next: ({items}) => {
-          setTodos([...items])
-        }
-      })
+  //Sort data based on content
+  const sortedTodos = data.sort((a, b) => {
+      if (a.content.toLowerCase() < b.content.toLowerCase()) {
+        return -1;
+      }
+      if (a.content.toLowerCase() > b.content.toLowerCase()) {
+        return 1;
+      }
+      return 0;
+    }
+  )
 
-    return () => sub.unsubscribe()
-  }, [])
-
-
-  const createTodo = async () => {
-    await client.models.Todo.create({
-      content: window.prompt("Todo content?"),
-      done: false,
-      priority: 'low'
-    })
-  }
+  // useEffect(() => {
+  //   const sub = client.models.Todo
+  //     .observeQuery()
+  //     .subscribe({
+  //       next: ({items}) => {
+  //         setTodos([...items])
+  //       }
+  //     })
+  //
+  //   return () => sub.unsubscribe()
+  // }, [])
+  //
+  //
+  // const createTodo = async () => {
+  //   await client.models.Todo.create({
+  //     content: window.prompt("Todo content?"),
+  //     done: false,
+  //     priority: 'low'
+  //   })
+  // }
 
   return (
-    <div>
-      <button onClick={createTodo}>Add new todo</button>
-      {todos.map((todo) => (
-        <div key={todo.id}>
-          <p>{todo.content}</p>
-          <p>{todo.priority}</p>
-          <p>{todo.done}</p>
-        </div>
-      ))}
+    <div className={"flex flex-col m-5"}>
+      {/*<button onClick={createTodo}>Add new todo</button>*/}
+      <Button/>
+      <div className={'flex flex-row items-center justify-center flex-wrap'}>
+        {data.map((todo) => (
+          <div className={'m-5'} key={todo.id}>
+            <Todo todo={todo}/>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
